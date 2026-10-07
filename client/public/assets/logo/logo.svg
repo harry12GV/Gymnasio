@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 480" role="img" aria-label="NEW START GYM">
+  <defs>
+    <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#FFD700"/>
+      <stop offset="1" stop-color="#B8860B"/>
+    </linearGradient>
+    <pattern id="mesh" width="16" height="16" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+      <rect width="16" height="16" fill="#0A0A0A"/>
+      <path d="M0 0H16M0 8H16" stroke="#2A2A2A" stroke-width="1"/>
+    </pattern>
+  </defs>
+
+  <!-- Fondo negro con textura de malla y marco dorado -->
+  <rect x="8" y="8" width="464" height="464" rx="32" fill="url(#mesh)"/>
+  <rect x="8" y="8" width="464" height="464" rx="32" fill="none" stroke="url(#gold)" stroke-width="4"/>
+
+  <!-- Línea decorativa superior -->
+  <rect x="120" y="150" width="240" height="4" rx="2" fill="url(#gold)"/>
+
+  <!-- Texto completo, forzado a caber en el ancho -->
+  <text x="240" y="238" text-anchor="middle" fill="url(#gold)"
+        font-family="'Bebas Neue', 'Arial Black', sans-serif" font-size="88" font-weight="700"
+        textLength="380" lengthAdjust="spacingAndGlyphs">NEW START</text>
+  <text x="240" y="330" text-anchor="middle" fill="#FFD700"
+        font-family="'Bebas Neue', 'Arial Black', sans-serif" font-size="64" font-weight="700"
+        textLength="200" lengthAdjust="spacingAndGlyphs">GYM</text>
+
+  <!-- Línea decorativa inferior -->
+  <rect x="120" y="368" width="240" height="4" rx="2" fill="url(#gold)"/>
+</svg>

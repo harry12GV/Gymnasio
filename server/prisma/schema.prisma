@@ -1,0 +1,193 @@
+// NEW START GYM — Fase 1 (MVP)
+// Schema de base de datos: usuarios/roles, socios, planes, membresías,
+// pagos de caja, check-ins con QR y configuración del gimnasio.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ─────────────────────────── Enums ───────────────────────────
+
+enum Role {
+  SUPER_ADMIN // Dueño
+  RECEPTION   // Recepción
+  MEMBER      // Socio (portal)
+}
+
+enum PlanType {
+  TIME      // Mensual / Trimestral / Anual
+  DAY_PASS  // Pase diario / sesión suelta (pagado)
+  TRIAL_DAY // Día de prueba ($0, captación — no pasa por caja)
+}
+
+enum DayPassMode {
+  NATURAL_DAY // Vence a medianoche del mismo día
+  HOURS_24    // 24 horas exactas desde el pago
+}
+
+enum MembershipStatus {
+  ACTIVE
+  EXPIRED    // Calculado por fecha, persistido para reportes
+  SUSPENDED
+  CANCELLED
+}
+
+enum PaymentMethod {
+  CASH           // Efectivo
+  TRANSFER       // Transferencia
+  CARD           // Tarjeta
+  DIGITAL_WALLET // Billeteras digitales (Mercado Pago, etc.)
+}
+
+enum PaymentCategory {
+  MEMBERSHIP // Mensualidades / planes por tiempo
+  DAY_PASS   // Pases diarios
+  OTHER      // Varios (reservado)
+}
+
+// ─────────────────────────── Auth ───────────────────────────
+
+model User {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  passwordHash String
+  name         String
+  role         Role      @default(MEMBER)
+  isActive     Boolean   @default(true) // baja lógica
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  // Un socio puede (o no) tener acceso al portal
+  member Member?
+
+  @@map("users")
+}
+
+// ─────────────────────────── Socios ───────────────────────────
+
+model Member {
+  id                   String        @id @default(cuid())
+  firstName            String
+  lastName             String
+  documentId           String        @unique // DNI / cédula
+  phone                String
+  email                String?       @unique
+  photoUrl             String?
+  birthDate            DateTime?
+  emergencyContactName String?
+  emergencyContactPhone String?
+  notes                String?
+  isActive             Boolean       @default(true) // baja lógica
+  qrToken              String        @unique @default(cuid()) // Código QR único
+  createdAt            DateTime      @default(now())
+  updatedAt            DateTime      @updatedAt
+
+  userId      String?      @unique
+  user        User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
+  memberships Membership[]
+  payments    Payment[]
+  checkIns    CheckIn[]
+
+  @@index([lastName, firstName])
+  @@map("members")
+}
+
+// ─────────────────────────── Planes ───────────────────────────
+
+model Plan {
+  id             String    @id @default(cuid())
+  name           String // "Mensual", "Trimestral", "Anual", "Pase Diario", "Día de Prueba"
+  type           PlanType
+  price          Decimal   @db.Decimal(10, 2) @default(0)
+  durationDays   Int? // Vigencia en días (planes por tiempo). Null = 1 día natural
+  isActive       Boolean   @default(true)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  memberships Membership[]
+
+  @@map("plans")
+}
+
+// ─────────────────────────── Membresías ───────────────────────────
+
+model Membership {
+  id        String           @id @default(cuid())
+  memberId  String
+  planId    String
+  status    MembershipStatus @default(ACTIVE)
+  startDate DateTime         @default(now())
+  endDate   DateTime // Vencimiento (medianoche del día para pases, o fecha exacta)
+  notes     String?
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  member  Member    @relation(fields: [memberId], references: [id])
+  plan    Plan      @relation(fields: [planId], references: [id])
+  payments Payment[]
+
+  @@index([memberId, status])
+  @@index([endDate])
+  @@map("memberships")
+}
+
+// ─────────────────────────── Caja / Pagos ───────────────────────────
+
+model Payment {
+  id           String          @id @default(cuid())
+  receiptCode  String          @unique // Ej: NS-2026-000123
+  memberId     String
+  membershipId String?
+  category     PaymentCategory @default(MEMBERSHIP)
+  method       PaymentMethod
+  amount       Decimal         @db.Decimal(10, 2)
+  notes        String?
+  registeredById String? // Usuario de recepción que registró el pago
+  createdAt    DateTime        @default(now())
+
+  member     Member      @relation(fields: [memberId], references: [id])
+  membership Membership? @relation(fields: [membershipId], references: [id])
+
+  @@index([createdAt])
+  @@index([memberId])
+  @@map("payments")
+}
+
+// ─────────────────────────── Check-in ───────────────────────────
+
+model CheckIn {
+  id        String    @id @default(cuid())
+  memberId  String
+  entryAt   DateTime  @default(now())
+  exitAt    DateTime?
+  result    String    @default("ALLOWED") // ALLOWED | DENIED (motivo en notes)
+  notes     String?
+  createdAt DateTime  @default(now())
+
+  member Member @relation(fields: [memberId], references: [id])
+
+  @@index([memberId, entryAt])
+  @@index([entryAt])
+  @@map("check_ins")
+}
+
+// ─────────────────────────── Configuración ───────────────────────────
+
+model GymSettings {
+  id            String      @id @default("main")
+  name          String      @default("NEW START GYM")
+  address       String?
+  phone         String?
+  email         String?
+  openingHours  Json? // Ej: { "monday": "06:00-23:00", ... }
+  dayPassMode   DayPassMode @default(NATURAL_DAY)
+  updatedAt     DateTime    @updatedAt
+
+  @@map("gym_settings")
+}

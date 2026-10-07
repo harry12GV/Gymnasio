@@ -1,0 +1,26 @@
+services:
+  - type: web
+    name: new-start-gym-api
+    runtime: node
+    plan: free
+    rootDir: server
+    buildCommand: npm ci && npm run build && npx prisma generate
+    startCommand: npm run start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false
+      - key: DIRECT_URL
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRES_IN
+        value: 7d
+      - key: CLIENT_URL
+        sync: false
+      - key: RESEND_API_KEY
+        sync: false
+      - key: TZ
+        value: America/Argentina/Buenos_Aires
